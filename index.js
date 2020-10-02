@@ -79,13 +79,13 @@ module.exports = class QuickMarkAsRead extends Plugin {
 
         FluxDispatcher.subscribe('MESSAGE_CREATE', this.onMessage = data => {
             const channel = getChannel(data.message.channel_id)
-            this.buttons.filter(b => b.props.channelId == channel.parent_id || b.props.channelId == channel.id).forEach(b => b.forceUpdate())
+            if (channel) this.buttons.filter(b => b.props.channelId == channel.parent_id || b.props.channelId == channel.id).forEach(b => b.forceUpdate())
         })
         Object.values(ActionTypes).filter(t => t.includes('_ACK')).forEach(t => {
             FluxDispatcher.subscribe(t, this.onAck || (this.onAck = data => {
                 if (!data.channelId) return
                 const channel = getChannel(data.channelId)
-                this.buttons.filter(b => b.props.channelId == channel.parent_id || b.props.channelId == channel.id).forEach(b => b.forceUpdate())
+                if (channel) this.buttons.filter(b => b.props.channelId == channel.parent_id || b.props.channelId == channel.id).forEach(b => b.forceUpdate())
             }))
         })
     }
