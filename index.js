@@ -14,27 +14,25 @@ module.exports = class QuickMarkAsRead extends Plugin {
         const { hasCategoryUnread } = await getModule(['hasCategoryUnread'])
         const Tooltip = await getModuleByDisplayName('Tooltip')
 
-        const ChannelItem = await getModuleByDisplayName('ChannelItem')
-        inject('qmar', ChannelItem.prototype, 'renderIcons', function (_, res) {
-            _this.buttons.filter(b => b.props.channelId == this?.props?.channel?.parent_id).forEach(b => b.forceUpdate())
-            if (!res || !this.props.unread) return res
-            const children = findInReactTree(res, c => Array.isArray(c))
-            if (!children || children.find(c => c?.props?.__qmar)) return res
-
-            children.unshift(React.createElement('div', { className: classes.iconItem, __qmar: true }, React.createElement(
-                Tooltip,
-                { text: Messages.MARK_AS_READ },
-                props => React.createElement(Icon, {
-                    ...props,
-                    name: 'ChatCheck',
-                    className: classes.actionIcon,
-                    width: 18,
-                    onClick: () => ack(this.props.channel.id)
-                })
-            )))
-
-            return res
-        })
+        const ChannelItem = await getModule(m => m.default && m.default.displayName == 'ChannelItem')
+        inject('qmar', ChannelItem, 'default', args => {
+            this.buttons.filter(b => b.props.channelId == args[0]?.channel?.parent_id).forEach(b => b.forceUpdate())
+            if (!args[0]?.unread || args[0].children.find(c => c?.props?.__qmar)) return args
+            args[0].children.unshift(React.createElement(
+                'div', { className: classes.iconItem, __qmar: true }, React.createElement(
+                    Tooltip, { text: Messages.MARK_AS_READ }, props => React.createElement(Icon, {
+                        ...props,
+                        name: 'ChatCheck',
+                        className: classes.actionIcon,
+                        width: 16,
+                        height: 16,
+                        onClick: () => ack(args[0].channel.id)
+                    })
+                )
+            ))
+            return args
+        }, true)
+        ChannelItem.default.displayName = 'ChannelItem'
 
         class QMARCategoryButton extends React.PureComponent {
             constructor(props) {
@@ -65,16 +63,16 @@ module.exports = class QuickMarkAsRead extends Plugin {
             }
         }
 
-        const ChannelCategoryItem = await getModuleByDisplayName('ChannelCategoryItem')
-        inject('qmar-category', ChannelCategoryItem.prototype, 'renderIcons', function (_, res) {
-            if (!res?.props) return res
-            if (!Array.isArray(res.props.children)) res.props.children = [ res.props.children ]
-            if (res.props.children.find(c => c?.type?.name == 'QMARCategoryButton')) return res
+        const ChannelCategoryItem = await getModule(m => m.default && m.default.displayName == 'ChannelCategoryItem')
+        inject('qmar-category', ChannelCategoryItem, 'default', args => {
+            if (!Array.isArray(args[0].children)) args[0].children = [ args[0].children ]
+            if (args[0].children.find(c => c?.type?.name == 'QMARCategoryButton')) return args
 
-            res.props.children.unshift(React.createElement(QMARCategoryButton, { channelId: this.props.channel.id }))
+            args[0].children.unshift(React.createElement(QMARCategoryButton, { channelId: args[0].channel.id }))
 
-            return res
-        })
+            return args
+        }, true)
+        ChannelCategoryItem.default.displayName = 'ChannelCategoryItem'
     }
 
     pluginWillUnload() {
