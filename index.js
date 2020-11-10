@@ -1,6 +1,5 @@
 const { Plugin } = require('powercord/entities')
 const { Icon } = require('powercord/components')
-const { findInReactTree } = require('powercord/util')
 const { getModule, getModuleByDisplayName, i18n: { Messages }, React } = require('powercord/webpack')
 const { inject, uninject } = require('powercord/injector')
 
@@ -9,7 +8,10 @@ module.exports = class QuickMarkAsRead extends Plugin {
 
     async startPlugin() {
         const _this = this
-        const classes = await getModule(['iconItem'])
+        const classes = {
+            ...await getModule(['addButton', 'clickable', 'wrapper']),
+            ...await getModule(['iconItem'])
+        }
         const { ack, ackCategory } = await getModule(['ack', 'ackCategory'])
         const { hasCategoryUnread } = await getModule(['hasCategoryUnread'])
         const Tooltip = await getModuleByDisplayName('Tooltip')
@@ -63,16 +65,19 @@ module.exports = class QuickMarkAsRead extends Plugin {
             }
         }
 
-        const ChannelCategoryItem = await getModule(m => m.default && m.default.displayName == 'ChannelCategoryItem')
-        inject('qmar-category', ChannelCategoryItem, 'default', args => {
-            if (!Array.isArray(args[0].children)) args[0].children = [ args[0].children ]
-            if (args[0].children.find(c => c?.type?.name == 'QMARCategoryButton')) return args
+        const FocusRing = await getModule(['FocusRingScope'])
+        inject('qmar-category', FocusRing, 'default', args => {
+            if (!args[0]?.children?.props?.className ||
+                args[0].children.props.className.indexOf(`${classes.wrapper} ${classes.clickable}`) === -1) return args
+            const { children } = args[0].children.props || [], { props } = children[1] || {}
+            if (!props) return args
+            if (!Array.isArray(props.children)) props.children = [ props.children ]
+            if (props.children.find(c => c?.type?.name == 'QMARCategoryButton')) return args
 
-            args[0].children.unshift(React.createElement(QMARCategoryButton, { channelId: args[0].channel.id }))
+            props.children.unshift(React.createElement(QMARCategoryButton, { channelId: children[0].props['data-list-item-id'].replace('channels___', '') }))
 
             return args
         }, true)
-        ChannelCategoryItem.default.displayName = 'ChannelCategoryItem'
     }
 
     pluginWillUnload() {
