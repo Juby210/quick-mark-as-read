@@ -65,16 +65,21 @@ module.exports = class QuickMarkAsRead extends Plugin {
             }
         }
 
+        const { iconVisibility } = await getModule(['addButton', 'iconVisibility'])
         const FocusRing = await getModule(['FocusRingScope'])
         inject('qmar-category', FocusRing, 'default', args => {
             if (!args[0]?.children?.props?.className ||
-                args[0].children.props.className.indexOf(`${classes.wrapper} ${classes.clickable}`) === -1) return args
+                args[0].children.props.className.indexOf(`${iconVisibility} ${classes.wrapper}`) === -1) return args
             const { children } = args[0].children.props || [], { props } = children[1] || {}
             if (!props) return args
             if (!Array.isArray(props.children)) props.children = [ props.children ]
             if (props.children.find(c => c?.type?.name == 'QMARCategoryButton')) return args
 
-            props.children.unshift(React.createElement(QMARCategoryButton, { channelId: children[0].props['data-list-item-id'].replace('channels___', '') }))
+            try {
+                props.children.unshift(React.createElement(QMARCategoryButton, { channelId: children[0].props['data-list-item-id'].split('_').pop() }))
+            } catch (e) {
+                this.error('Failed to add category button', e)
+            }
 
             return args
         }, true)
