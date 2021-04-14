@@ -1,7 +1,8 @@
 const { Plugin } = require('powercord/entities')
-const { Icon } = require('powercord/components')
 const { getModule, getModuleByDisplayName, i18n: { Messages }, React } = require('powercord/webpack')
 const { inject, uninject } = require('powercord/injector')
+
+const ChatCheck = getModuleByDisplayName('ChatCheck', false)
 
 module.exports = class QuickMarkAsRead extends Plugin {
     buttons = []
@@ -22,9 +23,8 @@ module.exports = class QuickMarkAsRead extends Plugin {
             if (!args[0]?.unread || args[0].children.find(c => c?.props?.__qmar)) return args
             args[0].children.unshift(React.createElement(
                 'div', { className: classes.iconItem, __qmar: true }, React.createElement(
-                    Tooltip, { text: Messages.MARK_AS_READ }, props => React.createElement(Icon, {
+                    Tooltip, { text: Messages.MARK_AS_READ }, props => React.createElement(ChatCheck, {
                         ...props,
-                        name: 'ChatCheck',
                         className: classes.actionIcon,
                         width: 16,
                         height: 16,
@@ -52,9 +52,8 @@ module.exports = class QuickMarkAsRead extends Plugin {
                 if (hasCategoryUnread(this.props.channelId)) return React.createElement(
                     Tooltip,
                     { text: Messages.MARK_AS_READ },
-                    props => React.createElement(Icon, {
+                    props => React.createElement(ChatCheck, {
                         ...props,
-                        name: 'ChatCheck',
                         className: classes.actionIcon,
                         style: { zIndex: 1 },
                         width: 18,
