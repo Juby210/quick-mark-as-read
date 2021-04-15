@@ -14,12 +14,23 @@ module.exports = class QuickMarkAsRead extends Plugin {
             ...await getModule(['iconItem'])
         }
         const { ack, ackCategory } = await getModule(['ack', 'ackCategory'])
-        const { hasCategoryUnread } = await getModule(['hasCategoryUnread'])
+        const { getChannel } = await getModule(['getChannel', 'getDMFromUserId'])
+        const { getCategories } = await getModule(m => m.getCategories && !m.getByName)
+        const { hasUnread } = await getModule(['hasCategoryUnread', 'hasUnread'])
+        const MutesStore = await getModule(['isChannelMuted'])
         const Tooltip = await getModuleByDisplayName('Tooltip')
 
-        const ChannelItem = await getModule(m => m.default && m.default.displayName == 'ChannelItem')
+        const hasCategoryUnread = id => {
+            const categoryChannel = getChannel(id)
+            const categories = getCategories(categoryChannel?.guild_id)
+            if (!categories?.[id]) return false
+            return categories[id]
+                .some(({ channel }) => hasUnread(channel.id) && !MutesStore.isChannelMuted(channel.guild_id, channel.id))
+        }
+
+        const ChannelItem = await getModule(m => m.default && m.default.displayName === 'ChannelItem')
         inject('qmar', ChannelItem, 'default', args => {
-            this.buttons.filter(b => b.props.channelId == args[0]?.channel?.parent_id).forEach(b => b.forceUpdate())
+            this.buttons.filter(b => b.props.channelId === args[0]?.channel?.parent_id).forEach(b => b.forceUpdate())
             if (!args[0]?.unread || args[0].children.find(c => c?.props?.__qmar)) return args
             args[0].children.unshift(React.createElement(
                 'div', { className: classes.iconItem, __qmar: true }, React.createElement(
@@ -72,7 +83,7 @@ module.exports = class QuickMarkAsRead extends Plugin {
             const { children } = args[0].children.props || [], { props } = children[1] || {}
             if (!props) return args
             if (!Array.isArray(props.children)) props.children = [ props.children ]
-            if (props.children.find(c => c?.type?.name == 'QMARCategoryButton')) return args
+            if (props.children.find(c => c?.type?.name === 'QMARCategoryButton')) return args
 
             try {
                 props.children.unshift(React.createElement(QMARCategoryButton, { channelId: children[0].props['data-list-item-id'].split('_').pop() }))
