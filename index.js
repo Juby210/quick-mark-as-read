@@ -1,7 +1,9 @@
 const { Plugin } = require('powercord/entities')
-const { getModule, getModuleByDisplayName, i18n: { Messages }, React } = require('powercord/webpack')
+const { findInReactTree } = require('powercord/util')
+const { getModule, getModuleByDisplayName, React } = require('powercord/webpack')
 const { inject, uninject } = require('powercord/injector')
 
+const { Messages } = getModule(m => m.Messages && m.Messages['en-US'], false) || {}
 const ChatCheck = getModuleByDisplayName('ChatCheck', false)
 
 module.exports = class QuickMarkAsRead extends Plugin {
@@ -76,23 +78,22 @@ module.exports = class QuickMarkAsRead extends Plugin {
         }
 
         const { iconVisibility } = await getModule(['addButton', 'iconVisibility'])
-        const FocusRing = await getModule(['FocusRingScope'])
-        inject('qmar-category', FocusRing, 'default', args => {
-            if (!args[0]?.children?.props?.className ||
-                args[0].children.props.className.indexOf(`${iconVisibility} ${classes.wrapper}`) === -1) return args
-            const { children } = args[0].children.props || [], { props } = children[1] || {}
-            if (!props) return args
+        const { DecoratedComponent: Category } = await getModule(m =>
+            m.DecoratedComponent && m.DecoratedComponent.type &&
+            (m.DecoratedComponent.__powercordOriginal_type || m.DecoratedComponent.type).toString().indexOf('Messages.CATEGORY_A11Y_LABEL') !== -1
+        )
+        inject('qmar-category', Category, 'type', (args, res) => {
+            const content = findInReactTree(res, e => e.onContextMenu)
+            if (!content) return res
+            const { props } = content.children[1]
             if (!Array.isArray(props.children)) props.children = [ props.children ]
-            if (props.children.find(c => c?.type?.name === 'QMARCategoryButton')) return args
-
-            try {
-                props.children.unshift(React.createElement(QMARCategoryButton, { channelId: children[0].props['data-list-item-id'].split('_').pop() }))
-            } catch (e) {
-                this.error('Failed to add category button', e)
-            }
-
-            return args
-        }, true)
+            if (props.children.find(c => c?.type?.name === 'QMARCategoryButton')) return res
+            props.children.unshift(React.createElement(QMARCategoryButton, {
+                channelId: args[0].channel.id
+            }))
+            return res
+        })
+        Category.type.toString = () => Category.type.__powercordOriginal_type.toString()
     }
 
     pluginWillUnload() {
