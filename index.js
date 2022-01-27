@@ -18,7 +18,7 @@ module.exports = class QuickMarkAsRead extends Plugin {
         const { ack, ackCategory } = await getModule(['ack', 'ackCategory'])
         const { getChannel } = await getModule(['getChannel', 'getDMFromUserId'])
         const { getCategories } = await getModule(m => m.getCategories && !m.getByName && !m.getApplication)
-        const { hasUnread } = await getModule(['hasCategoryUnread', 'hasUnread'])
+        const { hasUnread } = await getModule(['getUnreadCount', 'hasUnread'])
         const MutesStore = await getModule(['isChannelMuted'])
         const Tooltip = await getModuleByDisplayName('Tooltip')
 
